@@ -1,27 +1,34 @@
+from flask import Flask, request, send_file, jsonify
+import io
 import qrcode
 
-def link_to_qr(link, output_file):
-    # Create a QR code instance
+app = Flask(__name__)
+
+@app.route('/generate_qr', methods=['POST'])
+def generate_qr():
+    data = request.json
+    link = data.get('link')
+    if not link:
+        return jsonify({"error": "No link provided"}), 400
+
+    # Generate QR code
     qr = qrcode.QRCode(
-        version=1,  # Controls the size of the QR code, higher value means bigger size
-        error_correction=qrcode.constants.ERROR_CORRECT_L,  # Control the error correction used for the QR code
-        box_size=10,  # Size of each box (pixel size)
-        border=4  # Thickness of the border
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4
     )
-
-    # Add the link to the QR code
     qr.add_data(link)
-    qr.make(fit=True)  # Fit the QR code according to the input data
+    qr.make(fit=True)
 
-    # Generate the image for the QR code
     img = qr.make_image(fill='black', back_color='white')
 
-    # Save the image to a file
-    img.save(output_file)
+    # Save to an in-memory file
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return send_file(buffer, mimetype='image/png')
 
 if __name__ == "__main__":
-    # Example usage
-    link = input("Enter the link: ")
-    output_file = "qr_code.png"
-    link_to_qr(link, output_file)
-    print(f"QR code generated and saved as {output_file}")
+    app.run(debug=True)
